@@ -1,5 +1,9 @@
 using RecurrenceCoefficients, LinearAlgebra
 
+#functions to generate evenly-spaced points on the unit circle
+mgrid = (n,L) -> -L .+ 2*L*(0:n-1)/n
+zgrid = n -> exp.(1im*mgrid(n,pi))
+
 #use this to get convergence rate
 function golden_section(bands;tol=√eps())
     φ⁻¹ = (√5-1)/2
@@ -21,7 +25,7 @@ function golden_section(bands;tol=√eps())
     return real(gt[1])
 end
 
-function COMPRESS(J::Matrix,K::Matrix,ϵ=1e-13)
+function COMPRESS(J::Array,K::Array,ϵ=1e-13)
     (QJ, R) = qr(J)
     (L, QK) = lq(K)
     (U,Σ,V) = svd(R*L)
@@ -136,12 +140,30 @@ function lowrank_block_svd(A::Matrix,U::Array,V::Array,B::Matrix,akhp::AkhParams
     return lowrank_block_svd(A,U,V,B,akhp.α,akhp.avec,akhp.bvec,akhp.maxiter,akhp.conv_rate;σtol=σtol,get_resid=get_resid,store_rank=store_rank,tru_sol=tru_sol, use_weight_compress=use_weight_compress)
 end
 
-function get_params(bands::Array{Float64,2},A::Matrix, B::Matrix; circ_size=1.25, num_quad_pts=800, tol=1e-14)
+function get_params(bands::Array{Float64,2}, A::Matrix, B::Matrix; circ_size=1.25, num_quad_pts=800, tol=1e-14, numiter=nothing, unbounded_op=false)
     n,m = size(A,1), size(B,1)
     gt = golden_section(bands)
     egt = exp(gt)
 
-    numiter = ceil(-log(egt,maximum([tol/(5(m+n)*(1-1/egt)),eps()/5]))) |> Int
+    if numiter === nothing
+        numiter = ceil(-log(egt,maximum([tol/(5(m+n)*(1-1/egt)),eps()/5]))) |> Int
+    end
+    α = zeros(ComplexF64,numiter+1)
+
+    if unbounded_op
+        n = round(num_quad_pts/2) |> Int
+        gd = JacobiMappedInterval(-1,1,0,0)
+        y = gd.grid(n)
+        a, b = OperatorApproximation.Jacobi_ab(0.0,0.0)
+        w = OperatorApproximation.Gauss_quad(a,b,n-1)[2]
+        z = tan.(pi*y/2)
+        sgnpts = [-ones(n); ones(n)]
+        (avec,bvec,ints) = get_n_coeffs_and_ints_akh(bands, numiter, im*z)
+        for j = 1:n
+            α -= 2im*π*sgnpts[j]*w[j]*(z[j]^2+1)*ints[:,j]
+        end
+        return AkhParams(α,avec,bvec,egt,numiter)
+    end
 
     cc(j) = (bands[j,1]+bands[j,2])/2
     rr(j) = circ_size*(bands[j,2]-bands[j,1])/2
@@ -159,7 +181,6 @@ function get_params(bands::Array{Float64,2},A::Matrix, B::Matrix; circ_size=1.25
     
     (avec,bvec,ints) = get_n_coeffs_and_ints_akh(bands, numiter, ctrpts)
 
-    α = zeros(ComplexF64,numiter+1)
     for j = 1:length(ctrpts)
         α -= sgnpts[j]*weights[j]*ints[:,j]
     end
