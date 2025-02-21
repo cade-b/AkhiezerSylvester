@@ -151,16 +151,17 @@ function get_params(bands::Array{Float64,2}, A::Matrix, B::Matrix; circ_size=1.2
     α = zeros(ComplexF64,numiter+1)
 
     if unbounded_op
-        n = round(num_quad_pts/2) |> Int
+        #Uses same number of quadrature points per interval for simplicity. Should be adjusted if one interval is much larger than the other.
+        #n = round(num_quad_pts/2) |> Int
         gd = JacobiMappedInterval(-1,1,0,0)
-        y = gd.grid(n)
+        y = gd.grid(num_quad_pts)
         a, b = OperatorApproximation.Jacobi_ab(0.0,0.0)
-        w = OperatorApproximation.Gauss_quad(a,b,n-1)[2]
+        w = 2OperatorApproximation.Gauss_quad(a,b,num_quad_pts-1)[2]
         z = tan.(pi*y/2)
-        sgnpts = [-ones(n); ones(n)]
-        (avec,bvec,ints) = get_n_coeffs_and_ints_akh(bands, numiter, im*z)
-        for j = 1:n
-            α -= 2im*π*sgnpts[j]*w[j]*(z[j]^2+1)*ints[:,j]
+        #sgnpts = [-ones(n); ones(n)]
+        (avec,bvec,ints) = get_n_coeffs_and_ints_akh(bands, numiter, -im*z)
+        for j = 1:num_quad_pts
+            α += im*π*w[j]*(z[j]^2+1)*ints[:,j]
         end
         return AkhParams(α,avec,bvec,egt,numiter)
     end
