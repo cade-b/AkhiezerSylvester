@@ -242,7 +242,7 @@ function adi(A, B, F, p=nothing, q=nothing, tol=eps())
     #In = spdiagm(0 => ones(n))  # Sparse identity matrix
     #Im = spdiagm(0 => ones(m))  # Sparse identity matrix
     
-    compute_shifts = (p == nothing || q == nothing)
+    compute_shifts = (p === nothing || q === nothing)
     # user wants shift parameters computed:
     if compute_shifts
         # find intervals where eigenvalues live: 
