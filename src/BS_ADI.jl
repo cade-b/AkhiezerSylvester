@@ -214,7 +214,7 @@ function qzRecombine(P1, P2, S1, S2, Q1, Q2, Z1, Z2)
     return P, S, Q, Z
 end
 
-function adi(A, B, F, p=nothing, q=nothing, tol=eps())
+function adi(A, B, F, p=nothing, q=nothing; tol=eps())
 #=adi(A, B, F, p=P, q=Q)
  approximately solves AX - XB = F using ADI with ADI shift parameters 
  provided by vectors P, Q.
@@ -224,7 +224,7 @@ function adi(A, B, F, p=nothing, q=nothing, tol=eps())
  and the problem is solved to a relative accuracy of approximately machine 
  precision. 
 
- adi(A, B, F, tol=Tol) is as above, except the relative accuracy of the 
+ adi(A, B, F; tol=Tol) is as above, except the relative accuracy of the 
  of the solution is specified by Tol. 
 
  See getshifts_adi and getshifts_smith for help computing shift parameters. 
@@ -372,7 +372,7 @@ function mobiusT(II)
     return T, Tinv, gam, M
 end
 
-function fadi(A, B, U, V, p=nothing, q=nothing, tol=eps())
+function fadi(A, B, U, V, p=nothing, q=nothing; tol=eps())
     #= factored ADI:
     %
     % fadi(A, B, U, V, p, q)
@@ -390,7 +390,7 @@ function fadi(A, B, U, V, p=nothing, q=nothing, tol=eps())
     % and the problem is solved to a relative accuracy of approximately machine 
     % precision. 
     %
-    % fadi(A, B, U, V, tol=Tol) is as above, except the relative accuracy of the 
+    % fadi(A, B, U, V; tol=Tol) is as above, except the relative accuracy of the 
     % of the solution is specified by Tol. 
     %
     % See getshifts_adi and getshifts_smith for help computing shift parameters. 
@@ -461,11 +461,6 @@ function fadi(A, B, U, V, p=nothing, q=nothing, tol=eps())
         ZZ = hcat(ZZ, Z)
         YY = hcat(YY, Y)
         DD = vcat(DD, (q[i+1] - p[i+1]) * ones(r))
-        
-        # interim compression step
-        if tol != eps()
-            ZZ, DD, YY = compression(ZZ, DD, YY, tol)
-        end
     end
     
     return ZZ, diagm(DD), YY
