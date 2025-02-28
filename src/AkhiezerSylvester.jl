@@ -95,7 +95,7 @@ function lowrank_block_svd(A::Matrix,U::Array,V::Array,B::Matrix,coeffs::Vector,
             global Wₖ = coeffs[k+1]*[U Jₖ]/2
             global Zₖ = [CpA; Kₖ]
         else
-        #assemble Xₖ+UVpₖ(B) in block form
+        #assemble Xₖ+UVpₖ(A) in block form
             Wₖ = [Wₖ coeffs[k+1]*U/2 coeffs[k+1]*Jₖ/2]
             Zₖ = [Zₖ; CpA; Kₖ]
         end
@@ -146,7 +146,7 @@ function get_params(bands::Array{Float64,2}, A::Matrix, B::Matrix; circ_size=1.2
     egt = exp(gt)
 
     if numiter === nothing
-        numiter = ceil(-log(egt,maximum([tol/(5(m+n)*(1-1/egt)),eps()/5]))) |> Int
+        numiter = ceil(-log(egt,maximum([tol*(1-1/egt)/(5(m+n)),eps()/5]))) |> Int
     end
     α = zeros(ComplexF64,numiter+1)
 
