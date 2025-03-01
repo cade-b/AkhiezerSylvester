@@ -140,9 +140,11 @@ function lowrank_block_svd(A::Matrix,U::Array,V::Array,B::Matrix,akhp::AkhParams
     return lowrank_block_svd(A,U,V,B,akhp.α,akhp.avec,akhp.bvec,akhp.maxiter,akhp.conv_rate;σtol=σtol,get_resid=get_resid,store_rank=store_rank,tru_sol=tru_sol, use_weight_compress=use_weight_compress)
 end
 
-function get_params(bands::Array{Float64,2}, A::Matrix, B::Matrix; circ_size=1.25, num_quad_pts=800, tol=1e-14, numiter=nothing, unbounded_op=false)
+function get_params(bands::Array{Float64,2}, A::Matrix, B::Matrix; circ_size=1.25, num_quad_pts=800, tol=1e-14, numiter=nothing, unbounded_op=false, gt=nothing)
+    if gt === nothing
+        gt = golden_section(bands)
+    end
     n,m = size(A,1), size(B,1)
-    gt = golden_section(bands)
     egt = exp(gt)
 
     if numiter === nothing
