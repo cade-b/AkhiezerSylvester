@@ -1,6 +1,6 @@
 using LinearAlgebra
 
-function algorithm5(A, B, C₁, C₂; tol=1e-11, maxiter=100, get_resid=true)
+function algorithm5(A, B, C₁, C₂; tol=2e-7, maxiter=200, get_resid=true)
     # orthogonalize columns of C₁
     V₁ = qr(C₁).Q
     vₖ = Matrix(V₁)
@@ -11,28 +11,38 @@ function algorithm5(A, B, C₁, C₂; tol=1e-11, maxiter=100, get_resid=true)
 
     Vₖ = vₖ
     Wₖ = wₖ
-
-    if get_resid
-        resids = zeros(maxiter)
-    end
-
+    rnk = size(C₁)[2]
+    resids = zeros(maxiter)
+    Voldₖ = Vₖ
+    Woldₖ = Wₖ
     for k in 1:maxiter-1
         Aₖ = Vₖ' * A * Vₖ
         Bₖ = Wₖ' * B * Wₖ
+ 
+        # residual computation via Arnoldi relations: 
+        #println(k)
+        if k > 1
+            H = Aₖ[(k-1)*rnk+1:end, (k-1)*rnk+1:end]; 
+            G = Bₖ[(k-1)*rnk+1:end, (k-1)*rnk+1:end];
+            resids[k] = sqrt(norm(H*Yₖ[(k-2)*rnk+1 : end,:]).^2 + norm(Yₖ[:,(k-2)*rnk+1 : end]*G').^2)
+        else
+            resids[k] = 1 #for now just manually set first iteration to bad residual
+        end
+
+       if resids[k] < tol
+            println(k)
+            #println(size(Voldₖ))
+            #println(size(Yₖ))
+            #println(size(Woldₖ))
+            return Voldₖ, Yₖ, Woldₖ, resids[1:k]  #we are done
+        end
+        
         Cₖ = Vₖ' * C₁ * C₂' * Wₖ
 
         # Solve AₖY + YBₖ = Cₖ
         Yₖ = sylvester(Aₖ, Bₖ, -Cₖ)
 
-        # compute residuals (expensively) if requested
-        if get_resid
-            Xₖ = Vₖ * Yₖ * Wₖ'
-            resids[k] = norm(A*Xₖ + Xₖ*B - C₁*C₂')
-            println("Iteration $k, residual = ", resids[k])
-            if resids[k] < tol
-                return Vₖ, Yₖ, Wₖ, resids[1:k]
-            end
-        end
+
 
         #Next blocks in Krylov space
         v̂ = A * vₖ
@@ -72,6 +82,8 @@ function algorithm5(A, B, C₁, C₂; tol=1e-11, maxiter=100, get_resid=true)
         ŵ = Matrix(Qw)
 
         # update
+        Voldₖ = Vₖ
+        Woldₖ = Wₖ
         Vₖ = hcat(Vₖ, v̂)
         Wₖ = hcat(Wₖ, ŵ)
 
@@ -79,6 +91,7 @@ function algorithm5(A, B, C₁, C₂; tol=1e-11, maxiter=100, get_resid=true)
         wₖ = ŵ
     end
     # final Sylvester solve if max iterations hit
+    println("not converged")
     Aₖ = Vₖ' * A * Vₖ
     Bₖ = Wₖ' * B * Wₖ
     Cₖ = Vₖ' * C₁ * C₂' * Wₖ
@@ -86,9 +99,9 @@ function algorithm5(A, B, C₁, C₂; tol=1e-11, maxiter=100, get_resid=true)
     # Solve Aₖ*Y + Y*Bₖ = Cₖ
     Yₖ = sylvester(Aₖ, Bₖ, -Cₖ)
     if get_resid
-        Xₖ = Vₖ * Yₖ * Wₖ'
+       Xₖ = Vₖ * Yₖ * Wₖ'
         resids[maxiter] = norm(A*Xₖ + Xₖ*B - C₁*C₂')
-        println("Iteration $maxiter, residual = ", resids[maxiter])
+       println("Iteration $maxiter, residual = ", resids[maxiter])
         return Vₖ, Yₖ, Wₖ, resids
     else
         return Vₖ, Yₖ, Wₖ

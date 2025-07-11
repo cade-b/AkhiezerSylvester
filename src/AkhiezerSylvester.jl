@@ -34,8 +34,10 @@ function COMPRESS(J::Array,K::Array,ϵ=1e-13)
     #println("Old rank:",size(J,2)," New rank:",nsvals)
     
     if nsvals > 0
-        J = (QJ*U*Diagonal(.√Σ))[:,1:nsvals]
-        K = (Diagonal(.√Σ)*V'*QK)[1:nsvals,:]
+        #J = (QJ*U*Diagonal(.√Σ))[:,1:nsvals]
+        J = QJ*U[:,1:nsvals]*Diagonal(.√Σ[1:nsvals])
+        #K = (Diagonal(.√Σ)*V'*QK)[1:nsvals,:]
+        K = Diagonal(.√Σ[1:nsvals])*(V[:,1:nsvals])'*QK
     else
         J = zeros(size(J,1),1)
         K = zeros(1,size(K,2))
@@ -242,12 +244,18 @@ function sylv_operator_inv_low_rank(A::Matrix,U::Array,V::Array,B::Matrix, a::Fl
         elseif k == 1
             Jₖ = [Jₖ₋₁ -B*Jₖ₋₁ -α*Jₖ₋₁]/c #update Jₖ according to Chebyshev recurrence
             Kₖ = [Kₖ₋₁*A; Kₖ₋₁; Kₖ₋₁] #update Kₖ according to Chebyshev recurrence
+            #U = UniformScaling(-α)
+            #Jₖ = [Jₖ₋₁ (-B+U)*Jₖ₋₁]/c #update Jₖ according to Chebyshev recurrence
+           # Kₖ = [Kₖ₋₁*A; Kₖ₋₁] #update Kₖ according to Chebyshev recurrence
             Sₖ = Sₖ₋₁*ϱinv
             global Jₖ₋₂ = Jₖ₋₁
             global Kₖ₋₂ = Kₖ₋₁
         else          
             Jₖ = [(2/c)*Jₖ₋₁ -(2/c)*B*Jₖ₋₁ -(2α/c)*Jₖ₋₁ -Jₖ₋₂] #update Jₖ according to Chebyshev recurrence
             Kₖ = [Kₖ₋₁*A; Kₖ₋₁; Kₖ₋₁; Kₖ₋₂] #update Kₖ according to Chebyshev recurrence
+            #U = UniformScaling(-(2α/c))
+            #Jₖ = [(2/c)*Jₖ₋₁ (-(2/c)*B +U)*Jₖ₋₁ -Jₖ₋₂] #update Jₖ according to Chebyshev recurrence
+            #Kₖ = [Kₖ₋₁*A; Kₖ₋₁; Kₖ₋₂] #update Kₖ according to Chebyshev recurrence
             Sₖ = Sₖ₋₁*ϱinv
             Jₖ₋₂ = Jₖ₋₁
             Kₖ₋₂ = Kₖ₋₁
